@@ -1,0 +1,205 @@
+Tao Shi tshi206
+
+
+
+Question 1:
+the 'source' directory contains files: hundredthousand, oneten, onethousand, and twothousand, while 'mount' directory contains nothing initially. After executing the FUSE script, the 'mount' directory contains the files identical to the 'source' directory. This is because the FUSE attaches a new directory into the current Linux file system and the location the new directory is attached to is the 'mount' directory. By doing so, the original 'mount' is replaced by the new mount point. The mounted directory is created/attached by feeding extra information of existing files in the 'source' directory. This is implemented by subclassing the fuse.py with passthrough.py which overrides specified FUSE methods. Those overriden methods scan the provided 'source' directory as one of the parameters passed into the FUSE constructor, and then extract necessary information to feed into FUSE kernel module. After that the FUSE kernel module uses the supplied information to construct the mount point, resulting as the new 'mount' directory contains those files originally held by the 'source' directory.
+
+
+
+Questioni 2:
+
+cat oneten 
+
+DEBUG:fuse.log-mixin:-> getattr / (None,)
+DEBUG:fuse.log-mixin:<- getattr {'st_ctime': 1505251365.9651983, 'st_mtime': 1505251365.9651983, 'st_nlink': 2, 'st_mode': 16893, 'st_size': 4096, 'st_gid': 1000, 'st_uid': 1000, 'st_atime': 1505463378.983061}
+DEBUG:fuse.log-mixin:-> getattr /oneten (None,)
+DEBUG:fuse.log-mixin:<- getattr {'st_ctime': 1505251365.9651983, 'st_mtime': 1505251288.0004182, 'st_nlink': 1, 'st_mode': 33204, 'st_size': 31, 'st_gid': 1000, 'st_uid': 1000, 'st_atime': 1505251532.870434}
+DEBUG:fuse.log-mixin:-> open /oneten (32768,)
+DEBUG:fuse.log-mixin:<- open 4
+DEBUG:fuse.log-mixin:-> read /oneten (4096L, 0, 4L)
+DEBUG:fuse.log-mixin:<- read 'oneoneoneoneoneoneoneoneoneone\n'
+DEBUG:fuse.log-mixin:-> getattr /oneten (None,)
+DEBUG:fuse.log-mixin:<- getattr {'st_ctime': 1505251365.9651983, 'st_mtime': 1505251288.0004182, 'st_nlink': 1, 'st_mode': 33204, 'st_size': 31, 'st_gid': 1000, 'st_uid': 1000, 'st_atime': 1505465001.7357764}
+DEBUG:fuse.log-mixin:-> flush /oneten (4L,)
+DEBUG:fuse.log-mixin:<- flush None
+DEBUG:fuse.log-mixin:-> release /oneten (4L,)
+DEBUG:fuse.log-mixin:<- release None
+
+getattr / (None,) - gets the file attributes associated with / which is the mount directory.
+The output is a dictionary. st_ctime is the creation time, st_mtime is the modified time,
+st_nlink is the number of hard links, st_mode is the file access mode, st_size is the size in
+bytes, st_gid is the group id, st_uid is the user id, st_atime is the last accessed time.
+
+getattr /oneten (None,) - gets the file attributes associated with /oneten which is the file 'oneten' in the mount directory. st_ctime is the creation time, st_mtime is the modified time,
+st_nlink is the number of hard links, st_mode is the file access mode, st_size is the size in
+bytes, st_gid is the group id, st_uid is the user id, st_atime is the last accessed time.
+
+open /oneten (32768,) - opens the file 'oneten' in the mount directory. (32768,) is a canonical string representation of extra args. 4 is the integer file handle returned by this method, which will be passed to the read, write, flush, fsync and release methods to identify the open file.
+
+read /oneten (4096L, 0, 4L) - reads the file 'oneten' in the mount directory. 4096L is the size of the inputstream buffer. 0 is the starting position. 4L is the file handle identifies the file 'oneten' for read method. This method returns the content read from the file identified by the file handle and puts the return value in the outputstream.
+
+getattr /oneten (None,) - gets the file attributes associated with /oneten which is the file 'oneten' in the mount directory. st_ctime is the creation time, st_mtime is the modified time,
+st_nlink is the number of hard links, st_mode is the file access mode, st_size is the size in
+bytes, st_gid is the group id, st_uid is the user id, st_atime is the last accessed time.
+
+flush /oneten (4L,) - Handle close() syscall. 4L is the integer filehandle returned by a prior open or create call. This method is called whenever a file descriptor is closed. It may be called multiple times for the same open file (e.g. if the file handle has been duplicated). It forcely clear the outputstream by flushing out any data remains in the output buffer to its destination (console in this case). Returning None means ok.
+
+release /oneten (4L,) - Release open directory. 4L the file handle. This method will be called exactly once for each opendir call. After the file handle has been released, no further readdir requests will be received for it (until it is opened again with opendir). Returning None means ok.
+
+
+cat > newfile
+hello world
+^D
+
+DEBUG:fuse.log-mixin:-> getattr /newfile (None,)
+DEBUG:fuse.log-mixin:<- getattr "[Errno 2] No such file or directory: 'source/newfile'"
+DEBUG:fuse.log-mixin:-> create /newfile (33188L,)
+DEBUG:fuse.log-mixin:<- create 4
+DEBUG:fuse.log-mixin:-> getattr /newfile (None,)
+DEBUG:fuse.log-mixin:<- getattr {'st_ctime': 1505467566.2160168, 'st_mtime': 1505467566.2160168, 'st_nlink': 1, 'st_mode': 33188, 'st_size': 0, 'st_gid': 0, 'st_uid': 0, 'st_atime': 1505467566.2160168}
+DEBUG:fuse.log-mixin:-> flush /newfile (4L,)
+DEBUG:fuse.log-mixin:<- flush None
+DEBUG:fuse.log-mixin:-> getxattr /newfile (u'security.capability',)
+DEBUG:fuse.log-mixin:<- getxattr '[Errno 95] Operation not supported'
+DEBUG:fuse.log-mixin:-> write /newfile ('hello world\n', 0, 4L)
+DEBUG:fuse.log-mixin:<- write 12
+DEBUG:fuse.log-mixin:-> flush /newfile (4L,)
+DEBUG:fuse.log-mixin:<- flush None
+DEBUG:fuse.log-mixin:-> release /newfile (4L,)
+DEBUG:fuse.log-mixin:<- release None
+
+getattr /newfile (None,) - gets the file attributes associated with /newfile which is the file 'newfile' in the mount directory. Returning error because this file hasn't been created yet.
+
+create /newfile (33188L,) - Create a file with permissions mode and open it with flags. ctx will be a RequestContext instance. The method must return a tuple of the form (fh, attr), where fh is a file handle like the one returned by open and attr is an EntryAttributes instance with the attributes of the newly created directory entry. (Successful) execution of this handler increases the lookup count for the returned inode by one. 4L is the file handle returned by this call.
+
+getattr /newfile (None,) - gets the file attributes associated with /newfile which is the file 'newfile' in the mount directory. It's now been created.
+
+flush /newfile (4L,) - flushes any data in output buffer into 'newfile' identified by file handle 4L. Returning None means ok.
+
+getxattr /newfile (u'security.capability',) - Return extended attribute name of inode ('newfile' in this case). The requested attribute is 'security.capability'. Errno 95 is returned because the OS doesn't support this operation.
+
+write /newfile ('hello world\n', 0, 4L) - Write output buffer into file handle (4L) starting at position 0 (from the very beginning). The file handle will by an integer filehandle returned by a prior open or create call. This method must returns the number of bytes written (12 in this case). However, uuless the file system has been mounted with the direct_io option, the file system must always write all the provided data (i.e., return len(buf)).
+
+flush /newfile (4L,) - flushes buffered output to destination ('newfile' identified by 4L). It means ok when returning None.
+
+release /newfile (4L,) - Release open directory. 4L the file handle. This method will be called exactly once for each opendir call. After the file handle has been released, no further readdir requests will be received for it (until it is opened again with opendir). Returning None means ok.
+
+
+ls
+
+DEBUG:fuse.log-mixin:-> opendir / ()
+DEBUG:fuse.log-mixin:<- opendir 0
+DEBUG:fuse.log-mixin:-> getattr / (None,)
+DEBUG:fuse.log-mixin:<- getattr {'st_ctime': 1505467566.2160168, 'st_mtime': 1505467566.2160168, 'st_nlink': 2, 'st_mode': 16893, 'st_size': 4096, 'st_gid': 1000, 'st_uid': 1000, 'st_atime': 1505463378.983061}
+DEBUG:fuse.log-mixin:-> readdir / (0L,)
+DEBUG:fuse.log-mixin:<- readdir <generator object readdir at 0x7f89a4616320>
+DEBUG:fuse.log-mixin:-> getattr /oneten (None,)
+DEBUG:fuse.log-mixin:<- getattr {'st_ctime': 1505251365.9651983, 'st_mtime': 1505251288.0004182, 'st_nlink': 1, 'st_mode': 33204, 'st_size': 31, 'st_gid': 1000, 'st_uid': 1000, 'st_atime': 1505465001.7357764}
+DEBUG:fuse.log-mixin:-> getattr /onethousand (None,)
+DEBUG:fuse.log-mixin:<- getattr {'st_ctime': 1505251365.9651983, 'st_mtime': 1505251291.400418, 'st_nlink': 1, 'st_mode': 33204, 'st_size': 3001, 'st_gid': 1000, 'st_uid': 1000, 'st_atime': 1505251532.874434}
+DEBUG:fuse.log-mixin:-> getattr /twothousand (None,)
+DEBUG:fuse.log-mixin:<- getattr {'st_ctime': 1505251365.9651983, 'st_mtime': 1505251298.1444182, 'st_nlink': 1, 'st_mode': 33204, 'st_size': 6001, 'st_gid': 1000, 'st_uid': 1000, 'st_atime': 1505251532.874434}
+DEBUG:fuse.log-mixin:-> getattr /newfile (None,)
+DEBUG:fuse.log-mixin:<- getattr {'st_ctime': 1505467572.1279576, 'st_mtime': 1505467572.1279576, 'st_nlink': 1, 'st_mode': 33188, 'st_size': 12, 'st_gid': 0, 'st_uid': 0, 'st_atime': 1505467566.2160168}
+DEBUG:fuse.log-mixin:-> getattr /hundredthousand (None,)
+DEBUG:fuse.log-mixin:<- getattr {'st_ctime': 1505251365.9651983, 'st_mtime': 1505251281.268418, 'st_nlink': 1, 'st_mode': 33204, 'st_size': 700001, 'st_gid': 1000, 'st_uid': 1000, 'st_atime': 1505251532.874434}
+DEBUG:fuse.log-mixin:-> releasedir / (0L,)
+DEBUG:fuse.log-mixin:<- releasedir 0
+
+opendir / () - opens the directory / (mounted root). returns the integer file handle 0.
+
+getattr / (None,) - gets the file attributes associated with / which is the directory '/' (the root). st_ctime is the creation time, st_mtime is the modified time,
+st_nlink is the number of hard links, st_mode is the file access mode, st_size is the size in
+bytes, st_gid is the group id, st_uid is the user id, st_atime is the last accessed time.
+
+readdir / (0L,) - reads the directory identified by file handle 0L. returns the address of the direcotry.
+
+getattr /oneten (None,) - gets attributes for file '/oneten'
+
+getattr /onethousand (None,) - gets attributes for file '/onethousand'
+
+getattr /twothousand (None,) - gets attributes for file '/twothousand'
+
+getattr /newfile (None,) - gets attributes for file '/newfile'
+
+getattr /hundredthousand (None,) - gets attributes for file '/hundredthousand'
+
+releasedir / (0L,) - release the directory identified by OL. This method will be called exactly once for each opendir call. After fh has been released, no further readdir requests will be received for it (until it is opened again with opendir). It returns the file handle of the directory released.
+
+
+rm newfile
+
+DEBUG:fuse.log-mixin:-> getattr / (None,)
+DEBUG:fuse.log-mixin:<- getattr {'st_ctime': 1505467566.2160168, 'st_mtime': 1505467566.2160168, 'st_nlink': 2, 'st_mode': 16893, 'st_size': 4096, 'st_gid': 1000, 'st_uid': 1000, 'st_atime': 1505468534.9542854}
+DEBUG:fuse.log-mixin:-> getattr /newfile (None,)
+DEBUG:fuse.log-mixin:<- getattr {'st_ctime': 1505467572.1279576, 'st_mtime': 1505467572.1279576, 'st_nlink': 1, 'st_mode': 33188, 'st_size': 12, 'st_gid': 0, 'st_uid': 0, 'st_atime': 1505467566.2160168}
+DEBUG:fuse.log-mixin:-> unlink /newfile ()
+DEBUG:fuse.log-mixin:<- unlink None
+
+getattr / (None,) - gets '/' (mounted root) directory's attributes
+
+getattr /newfile (None,) - gets attributes of '/newfile' inside the '/' directory
+
+unlink /newfile () - Remove a (possibly special) file. This method must remove the (special or regular) file name from the direcory with inode 'parent_inode' ('/' in this case). ctx will be a RequestContext instance. If the inode associated with file (i.e., not the parent_inode) has a non-zero lookup count, or if there are still other directory entries referring to this inode (due to hardlinks), the file system must remove only the directory entry (so that future calls to readdir for parent_inode will no longer include name, but e.g. calls to getattr for file‘s inode still succeed). (Potential) removal of the associated inode with the file contents and metadata must be deferred to the forget method to be carried out when the lookup count reaches zero (and of course only if at that point there are no more directory entries associated with the inode either). Returning None means ok.
+
+
+
+Question 3:
+__init__:
+self.files = {}
+create a dictionary field called 'files'
+self.data = defaultdict(bytes)
+create a default dictionary file called 'data' with values stored in variable 'bytes'
+self.fd = 0
+create a file 'fd' (file descriptor) with initial value 0
+now = time()
+store current time in variable 'now'
+self.files['/'] = dict(st_mode=(S_IFDIR | 0o755), st_ctime=now,
+                               st_mtime=now, st_atime=now, st_nlink=2)
+set the dictionary entry '/' with value that is another dictionary of keys: st_mode, st_ctime, st_mtime, st_atime, and st_nlink, with values: (S_IFDIR | 0o755), now, now, now, and 2 respectivey.
+
+getattr:
+if path not in self.files:
+if value of 'path' parameter is not held in the set of files' keys
+     raise FuseOSError(ENOENT)
+then throw a FuseOSError exception
+return self.files[path]
+returns the value mapped by key 'path' in 'files' dictionary where the key takes the value of parameter 'path'
+
+readdir:
+return ['.', '..'] + [x[1:] for x in self.files if x != '/']
+returns a list containing string representations of each files/directories in the '/' directory. Particularly it iterates through all mapping in dictionary 'files' to extract every string stored except '/'.
+
+open:
+self.fd += 1
+increases the fd by one. fd is the field representing a file descripter (served as a file handle).
+return self.fd
+then returns the incremented fd.
+ 
+create:
+self.files[path] = dict(st_mode=(S_IFREG | mode), st_nlink=1,
+                                st_size=0, st_ctime=time(), st_mtime=time(),
+                                st_atime=time())
+adds a new entry in the 'files' dictionary where the entry represents a particular path to the creating file and maps to a set of pre-defined attributes (e.g. create time, modified time, etc.).
+self.fd += 1
+increments the file handle
+return self.fd
+returns the file handle
+
+unlink:
+self.files.pop(path)
+removes the mapping of a key specified by the value of parameter 'path'
+
+write:
+self.data[path] = self.data[path][:offset] + data
+creates a new entry of value given by 'path', which stores a mapping to a 'data' variable. 'data' variable stores the data to be written from a specified 'offset' (if provided, otherwise 0).
+self.files[path]['st_size'] = len(self.data[path])
+edits the mapping of a key with value given by 'path', whose 'st_size' entry will replace its mapping with new value given by 'len(self.data[path])' which stores the data of a particular file (identified by the 'path' key).
+return len(data)
+returns the length of data (in bytes) that has been written to the file.
+
+read:
+return self.data[path][offset:offset + size]
+returns the data stored in dictionary 'data' of entry given by the value of 'path'. the value of data is of the size specified by parameter 'size' and starting from the position 'offset' specified by parameter 'offset'.
+
