@@ -146,20 +146,20 @@ unlink /newfile () - Remove a (possibly special) file. This method must remove t
 
 
 Question 3:
-__init__:
+__init__: setup the 'files storage' in memory
 self.files = {}
 create a dictionary field called 'files'
 self.data = defaultdict(bytes)
 create a default dictionary file called 'data' with values stored in variable 'bytes'
 self.fd = 0
-create a file 'fd' (file descriptor) with initial value 0
+create a field 'fd' (file descriptor) with initial value 0
 now = time()
 store current time in variable 'now'
 self.files['/'] = dict(st_mode=(S_IFDIR | 0o755), st_ctime=now,
                                st_mtime=now, st_atime=now, st_nlink=2)
 set the dictionary entry '/' with value that is another dictionary of keys: st_mode, st_ctime, st_mtime, st_atime, and st_nlink, with values: (S_IFDIR | 0o755), now, now, now, and 2 respectivey.
 
-getattr:
+getattr: get the corresponding attributes stored in the specified 'path' entry in the 'files' dictionary
 if path not in self.files:
 if value of 'path' parameter is not held in the set of files' keys
      raise FuseOSError(ENOENT)
@@ -167,17 +167,17 @@ then throw a FuseOSError exception
 return self.files[path]
 returns the value mapped by key 'path' in 'files' dictionary where the key takes the value of parameter 'path'
 
-readdir:
+readdir: loop through the dictionary to extract all entries and return them
 return ['.', '..'] + [x[1:] for x in self.files if x != '/']
 returns a list containing string representations of each files/directories in the '/' directory. Particularly it iterates through all mapping in dictionary 'files' to extract every string stored except '/'.
 
-open:
+open: increment the 'fake' file descriptor
 self.fd += 1
 increases the fd by one. fd is the field representing a file descripter (served as a file handle).
 return self.fd
 then returns the incremented fd.
  
-create:
+create: add another entry in the 'files' dictionary, whose attributes are all set
 self.files[path] = dict(st_mode=(S_IFREG | mode), st_nlink=1,
                                 st_size=0, st_ctime=time(), st_mtime=time(),
                                 st_atime=time())
@@ -187,11 +187,11 @@ increments the file handle
 return self.fd
 returns the file handle
 
-unlink:
+unlink: remove a particular mapping in the dictionary
 self.files.pop(path)
 removes the mapping of a key specified by the value of parameter 'path'
 
-write:
+write: write data to a specified entry in the dictionary
 self.data[path] = self.data[path][:offset] + data
 creates a new entry of value given by 'path', which stores a mapping to a 'data' variable. 'data' variable stores the data to be written from a specified 'offset' (if provided, otherwise 0).
 self.files[path]['st_size'] = len(self.data[path])
@@ -199,7 +199,7 @@ edits the mapping of a key with value given by 'path', whose 'st_size' entry wil
 return len(data)
 returns the length of data (in bytes) that has been written to the file.
 
-read:
+read: read data from a dictionary entry, specified by key value 'path'
 return self.data[path][offset:offset + size]
 returns the data stored in dictionary 'data' of entry given by the value of 'path'. the value of data is of the size specified by parameter 'size' and starting from the position 'offset' specified by parameter 'offset'.
 
